@@ -237,6 +237,8 @@ int main(int argc, char* argv[]) {
 
     }
 
+#else
+    cout << ":)\n";
 #endif
     return 0;
 }
