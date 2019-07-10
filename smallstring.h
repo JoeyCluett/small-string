@@ -2,7 +2,7 @@
 
 //
 // SmallString is a string implementation that prioritizes small memory footprint 
-// over speed of access. this project came about because I needed a library that 
+// over speed of access. this project came about because I wanted a library that 
 // provided a lot of strings without the mandatory minimum overhead of the 
 // modern std::string (32 bytes). A lot of effort has gone into making this library 
 // a drop-in replacement for std::string. Obviously, that will never always be 
@@ -23,7 +23,7 @@
 // Notes:
 // never create or modify small_string_t objects while iterating. there is a very coupled 
 // relationship between ALL small_string_t objects as they all internally share a single 
-// static character buffer. this buffer may allocate itself at any time while modifying 
+// static character buffer. this buffer may re-allocate itself at any time while modifying 
 // strings and so any iterators will be invalidated
 //
 
@@ -34,7 +34,7 @@
 #include <algorithm> // lexicographical_compare
 
 // comment out for release. be advised, this thing produces a LOT of output
-#define SMALL_STRING_DEBUG
+//#define SMALL_STRING_DEBUG
 
 #ifdef SMALLSTRING_USING_THREADS
 typedef std::string small_string_t;
@@ -127,15 +127,25 @@ public:
     }
 
     SmallString(const char* c) {
+        int len = strlen(c);
+
         #ifdef SMALL_STRING_DEBUG
-        std::cout << "small_string_t constructor, const char*: " << c << std::endl;
+        std::cout << "small_string_t constructor, const char*: " << (len ? c : "EMPTYSTRING") << std::endl;
         #endif
 
-        int len = strlen(c);
-        if(len == 0) {
+        if(len == 0) { // empty string
             this->table_entry = -1;
+
+            #ifdef SMALL_STRING_DEBUG
+            std::cout << "    constructor returns early for empty string\n";
+            #endif
+
             return;
         }
+
+        #ifdef SMALL_STRING_DEBUG
+        std::cout << "    string length: " << len << std::endl;
+        #endif
 
         int index = this->find_empty_entry();
         auto& p = offset_table.at(index);
@@ -172,6 +182,8 @@ public:
             this->table_entry = index;
         }
     }
+
+    // TODO: create a constructor that accepts a std::string as an argument
 
     ~SmallString(void) {
 
@@ -273,42 +285,87 @@ public:
         return p.second - p.first;
     }
 
-    // 3 different equality operators
+    // equality operators
 
     bool operator==(SmallString& ss) const {
-        if(&ss == this) return true;
-        if(ss.size() != this->size()) return false;
+        
+        #ifdef SMALL_STRING_DEBUG
+        std::cout << "small_string_t == lvalue ref\n";
+        #endif
 
-        // compare each character in each string one-by-one
-        int sz = this->size();
-        for(int i = 0; i < sz; i++)
-            if(ss[i] != ((*this)[i])) return false;
+        if(&ss == this) return true; // same object is always equivalent
 
-        return true;
+        if(this->table_entry == -1) {
+            // this object contains an empty string
+            return (ss.table_entry == -1);
+        }
+        else {
+            if(ss.table_entry == -1) {
+                return false;
+            }
+            else {
+                int sz = this->size();
+
+                if(ss.size() != sz) return false;
+
+                // compare each character in each string one-by-one
+                for(int i = 0; i < sz; i++)
+                    if(ss[i] != ((*this)[i])) return false;
+
+                return true;
+            }
+        }
     }
 
     bool operator==(const char* c) const {
         int c_sz = strlen(c);
-        int sz = this->size();
 
-        if(c_sz != sz) return false;
-
-        for(int i = 0; i < sz; i++)
-            if(c[i] != ((*this)[i])) return false;
-
-        return true;
+        if(this->table_entry == -1) {
+            // this object is an empty string
+            return (c_sz == 0);
+        }
+        else {
+            int sz = this->size();
+            if(c_sz != sz) 
+                return false;
+            else {
+                for(int i = 0; i < sz; i++)
+                    if(c[i] != ((*this)[i])) 
+                        return false;
+                return true;
+            }
+        }
     }
 
     bool operator==(SmallString&& ss) const {
-        int ss_sz = ss.size();
-        int sz = ss.size();
+        
+        #ifdef SMALL_STRING_DEBUG
+        std::cout << "small_string_t == rvalue ref\n";
+        #endif
 
-        if(sz != ss_sz) return false;
+        // if the argument is an rvalue, this will NEVER be true
+        //if(&ss == this) return true; // same object is always equivalent
 
-        for(int i = 0; i < sz; i++)
-            if(ss[i] != ((*this)[i])) return false;
+        if(this->table_entry == -1) {
+            // this object contains an empty string
+            return (ss.table_entry == -1);
+        }
+        else {
+            if(ss.table_entry == -1) {
+                return false;
+            }
+            else {
+                int sz = this->size();
 
-        return true;
+                if(ss.size() != sz) return false;
+
+                // compare each character in each string one-by-one
+                for(int i = 0; i < sz; i++)
+                    if(ss[i] != ((*this)[i])) return false;
+
+                return true;
+            }
+        }
     }
 
     // inequality operators
@@ -606,7 +663,7 @@ public:
     }
 
     // ========================================================================
-    // comparison operators (except == which is defined above)
+    // lexicographical comparison operators (except == which is defined above)
     // ========================================================================
     
     friend bool operator<(SmallString lhs, SmallString rhs) {
@@ -658,5 +715,7 @@ template<typename char_type_t> typename std::vector<char_type_t> SmallString<cha
 template<typename char_type_t> std::vector<std::pair<int, int>> SmallString<char_type_t>::offset_table;
 
 typedef SmallString<char> small_string_t;
+#warning small_string_t is typedefed to SmallString<char>
+
 #endif
 

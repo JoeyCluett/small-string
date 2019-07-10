@@ -4,7 +4,7 @@
 #include <vector>
 #include <assert.h>
 
-#define SMALLSTRING_USING_THREADS
+//#define SMALLSTRING_USING_THREADS
 #include "smallstring.h"
 
 using namespace std;
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
         std::vector<small_string_t> string_vector = { "string0", "string1", "string2", "string3" };
 
         for(int i = 0; i < string_vector.size(); i++) {
-            cout << i << " : " << string_vector[i] << endl;
+            cout << i << " : '" << string_vector[i] << "'\n";
         }
         small_string_t::print_info(cout) << "\n";
 
@@ -157,14 +157,14 @@ int main(int argc, char* argv[]) {
         std::reverse(string_vector.begin(), string_vector.end());
         cout << "After reversing the vector...\n";
         for(int i = 0; i < string_vector.size(); i++) {
-            cout << i << " : " << string_vector[i] << endl;
+            cout << i << " : '" << string_vector[i] << "'\n";
         }
         small_string_t::print_info(cout) << "\n";
 
         string_vector.clear();
         cout << "After clearing the vector...\n";
         for(int i = 0; i < string_vector.size(); i++) {
-            cout << i << " : " << string_vector[i] << endl;
+            cout << i << " : '" << string_vector[i] << "'\n";
         }
         small_string_t::print_info(cout) << "\n";
     
@@ -175,6 +175,7 @@ int main(int argc, char* argv[]) {
     {
         small_string_t temp_stringa("Hello World");
         small_string_t temp_stringb("hEllo World");
+        small_string_t empty_string("");
 
         cout << "Testing equivalence operators\n\n";
         
@@ -192,7 +193,11 @@ int main(int argc, char* argv[]) {
         cout << "Expecting false: " << (small_string_t("Hello World") != temp_stringa) << endl;
         cout << "Expecting true:  " << (small_string_t("Hello World") != "hEllo World") << endl;
         cout << "Expecting true:  " << (small_string_t("Hello World") != small_string_t("hEllo World")) << endl;
-        cout << "Expecting true:  " << (small_string_t("Hello World") != temp_stringb) << endl;
+        cout << "Expecting true:  " << (small_string_t("Hello World") != temp_stringb) << endl << flush;
+
+        cout << "Expecting false: " << (small_string_t("Hello World") == "") << endl << flush;
+        cout << "Expecting true:  " << (small_string_t("") == "")            << endl << flush;
+        cout << "Expecting true:  " << (small_string_t("") == empty_string)  << endl << flush;
 
         // lvalue refs are on the left
         cout << "\nlvalue refs on the left...\n";
@@ -209,9 +214,17 @@ int main(int argc, char* argv[]) {
         cout << "Expecting true:  " << (temp_stringa != "hEllo World") << endl;
         cout << "Expecting true:  " << (temp_stringa != small_string_t("hEllo World")) << endl;
         cout << "Expecting true:  " << (temp_stringa != temp_stringb) << endl;
-    }
-#endif
+    
+        cout << "Expecting false: " << (empty_string == small_string_t("Hello World")) << endl << flush; 
+        cout << "Expecting false: " << (temp_stringa == "") << endl << flush;
+        cout << "Expecting true:  " << (empty_string == "") << endl << flush;
+        cout << "Expecting true:  " << (empty_string == small_string_t("")) << endl << flush;
+        cout << "Expecting true:  " << (empty_string == empty_string) << endl << flush;
 
+
+    }
+
+#endif
     return 0;
 }
 
