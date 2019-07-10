@@ -33,11 +33,12 @@
 #include <string>
 #include <algorithm> // lexicographical_compare
 
-// comment out for release
-//#define SMALL_STRING_DEBUG
+// comment out for release. be advised, this thing produces a LOT of output
+#define SMALL_STRING_DEBUG
 
 #ifdef SMALLSTRING_USING_THREADS
 typedef std::string small_string_t;
+#warning small_string_t is typedefed to std::string 
 #else
 
 template<typename char_type_t>
