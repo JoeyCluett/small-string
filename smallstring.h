@@ -310,6 +310,20 @@ public:
         return true;
     }
 
+    // inequality operators
+
+    bool operator!=(SmallString& ss) const {
+        return !(*this == ss);
+    }
+
+    bool operator!=(const char* c) const {
+        return !(*this == c);
+    }
+
+    bool operator!=(SmallString&& ss) const {
+        return !(*this == ss);
+    }
+
     friend std::ostream& operator<<(std::ostream& os, const SmallString& ss) {
         if(ss.table_entry != -1) {
             auto& cv = SmallString::char_table;
