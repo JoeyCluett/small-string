@@ -224,6 +224,19 @@ int main(int argc, char* argv[]) {
 
     }
 
+    // add enough strings to a vector that it has to reallocate storage
+    {
+        std::vector<small_string_t> string_vector;
+        string_vector.reserve(8);
+        cout << "\nString vector capacity: " << string_vector.capacity() << endl;
+        auto cap = string_vector.capacity();
+        for(int i = 0; i < cap+1; i++) {
+            // for vector to reallocate eventually
+            string_vector.emplace_back("Newstring");
+        }
+        
+    }
+
 #endif
     return 0;
 }

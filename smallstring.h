@@ -34,7 +34,7 @@
 #include <algorithm> // lexicographical_compare
 
 // comment out for release. be advised, this thing produces a LOT of output
-//#define SMALL_STRING_DEBUG
+#define SMALL_STRING_DEBUG
 
 #ifdef SMALLSTRING_USING_THREADS
 typedef std::string small_string_t;
@@ -144,7 +144,7 @@ public:
         }
 
         #ifdef SMALL_STRING_DEBUG
-        std::cout << "    string length: " << len << std::endl;
+        //std::cout << "    string length: " << len << std::endl;
         #endif
 
         int index = this->find_empty_entry();
@@ -176,6 +176,7 @@ public:
             p.second = p.first + s.size();
 
             // make sure character buffer doesnt reallocate during copy
+            SmallString::char_table.reserve(SmallString::char_table.size() + s.size());
             for(char c : s)
                 char_table.push_back(c);
 
