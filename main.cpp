@@ -1,6 +1,8 @@
 #include <iostream>
 #include <map>
-#include "SmallString.h"
+#include <utility>
+#include <vector>
+#include "smallstring.h"
 
 using namespace std;
 
@@ -62,7 +64,7 @@ int main(int argc, char* argv[]) {
     {
         // a bunch of strings again
         small_string_t 
-            a = "Applicance", 
+            a = "Appliance", 
             b = "Gorgeous", 
             c = "Impress",
             d = "Respect",
@@ -86,10 +88,83 @@ int main(int argc, char* argv[]) {
         string_map.insert({ "Kgorgeous",  "Vfinger" });
         string_map.insert({ "Kimpress",   "Vcomplete" });
         string_map.insert({ "Khideous",   "Vabject" });
+    
+        cout << "iterating through list and printing\n";
+        for(auto& p : string_map) {
+            cout << p.first << " -> " << p.second << endl;
+        }
     }
 
-    cout << "SHOULD BE EMPTY NOW...\n" << flush;
+    cout << "SHOULD BE EMPTY NOW...\n";
     small_string_t::print_info(cout) << "\n\n";
+
+    //cout << "cleaning...\n";
+    //small_string_t::clean();
+    //cout << "should be zero entries now\n";
+    //small_string_t::print_info(cout) << "\n\n";
+
+     {
+        // need these again
+        small_string_t 
+            a = "Appliance", 
+            b = "Gorgeous", 
+            c = "Impress",
+            d = "Respect",
+            e = "Hideous",
+            f = "Popcorn";
+
+        small_string_t::print_info(cout) << "\n\n";
+    
+        c = c + c + c;
+        cout << "Triple copy of string: " << c << endl;
+        small_string_t::print_info(cout) << "\n\n";
+    }
+
+    auto returns_small_string = [](void) -> small_string_t {
+        return "Cool new string";
+    };
+
+    cout << "Returns small_string_t: '" << returns_small_string() << "'\n";
+
+    {
+        cout << "Testing with std::swap...\n";
+        small_string_t a = "Astring", b = "Bstring";
+        small_string_t::print_info(cout) << "\n";
+        std::swap(a, b);
+        small_string_t::print_info(cout) << "\n";
+        cout << "Swapping again...\n";
+        std::swap(a, b);
+        small_string_t::print_info(cout) << "\n";
+        cout << "Swapping a third time...\n";
+        std::swap(a, b);
+        small_string_t::print_info(cout) << "\n";
+    }
+
+    {
+        cout << "Testing with std::vector...\n";
+        std::vector<small_string_t> string_vector = { "string0", "string1", "string2", "string3" };
+
+        for(int i = 0; i < string_vector.size(); i++) {
+            cout << i << " : " << string_vector[i] << endl;
+        }
+        small_string_t::print_info(cout) << "\n";
+
+        // reverse the vector
+        std::reverse(string_vector.begin(), string_vector.end());
+        cout << "After reversing the vector...\n";
+        for(int i = 0; i < string_vector.size(); i++) {
+            cout << i << " : " << string_vector[i] << endl;
+        }
+        small_string_t::print_info(cout) << "\n";
+
+        string_vector.clear();
+        cout << "After clearing the vector...\n";
+        for(int i = 0; i < string_vector.size(); i++) {
+            cout << i << " : " << string_vector[i] << endl;
+        }
+        small_string_t::print_info(cout) << "\n";
+    
+    }
 
     return 0;
 }

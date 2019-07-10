@@ -18,7 +18,7 @@
 // 3.) TriviallyCopyable        [false, never will be]
 // 4.) EqualityComparable       [true]
 // 5.) Swappable                [true]
-// 6.) Container                [true]
+// 6.) Container                [true, iterable]
 //
 // Notes:
 // never create or modify small_string_t objects while iterating. there is a very coupled 
@@ -34,7 +34,7 @@
 #include <algorithm> // lexicographical_compare
 
 // comment out for release
-#define SMALL_STRING_DEBUG
+//#define SMALL_STRING_DEBUG
 
 #ifdef SMALLSTRING_USING_THREADS
 typedef std::string small_string_t;
@@ -131,6 +131,10 @@ public:
         #endif
 
         int len = strlen(c);
+        if(len == 0) {
+            this->table_entry = -1;
+            return;
+        }
 
         int index = this->find_empty_entry();
         auto& p = offset_table.at(index);
@@ -148,7 +152,10 @@ public:
 
     SmallString(const SmallString& s) {
         #ifdef SMALL_STRING_DEBUG
-        std::cout << "small_string_t constructor, const small_string_t ref\n";
+        std::cout << "small_string_t constructor, const small_string_t ref: ";
+        for(char c : s)
+            std::cout << c;
+        std::cout << std::endl;
         #endif
 
         if(s.table_entry != -1) {
@@ -169,6 +176,7 @@ public:
 
         #ifdef SMALL_STRING_DEBUG
         std::cout << "small_string_t destructor. index: " << this->table_entry << ", contents: " << *this << std::endl;
+        SmallString::print_info(std::cout) << std::endl;
         #endif
 
         if(this->table_entry != -1) {
@@ -178,7 +186,20 @@ public:
             p.first  = -1;
             p.second = -1;
         }
+
+        this->clean();
     }
+
+    // im debating whether this should actually be a public method. Calling 
+    // it too often will harm performance to an excessive degree
+    static void clean(void) {
+        auto& ot = SmallString::offset_table;
+        while(ot.back().first == -1 && ot.back().second == -1)
+            ot.pop_back();
+    }
+
+    // seriously considering making a different iterator type that wont 
+    // invalidate iterators if strings are modified while iterating
 
     auto begin(void) const -> typename std::vector<char_type_t>::iterator {
         if(this->table_entry == -1) {
@@ -200,6 +221,8 @@ public:
         }
     }
 
+    // access individual character in string. throws runtime_error if 
+    // index is out of bounds
     char& at(int index) {
         if(index >= this->size())
             throw std::runtime_error("SmallString error: out of range using .at()");
@@ -287,7 +310,7 @@ public:
         return true;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, SmallString& ss) {
+    friend std::ostream& operator<<(std::ostream& os, const SmallString& ss) {
         if(ss.table_entry != -1) {
             auto& cv = SmallString::char_table;
             auto& ot = SmallString::offset_table;
@@ -300,7 +323,7 @@ public:
         return os;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, SmallString&& ss) {
+    friend std::ostream& operator<<(std::ostream& os, const SmallString&& ss) {
         if(ss.table_entry != -1) {
             auto& p = SmallString::offset_table.at(ss.table_entry);
             os.write(&SmallString::char_table[0] + p.first, ss.size());
@@ -309,7 +332,7 @@ public:
         return os;
     }
 
-    SmallString& operator=(SmallString& rhs) {
+    SmallString& operator=(SmallString const& rhs) {
 
         #ifdef SMALL_STRING_DEBUG
         std::cout << "assignment operator, small_string_t ref\n";
@@ -369,6 +392,10 @@ public:
         return *this;
     }
 
+    // ========================================================================
+    // + lvalue ref is on left hand side
+    // ========================================================================
+
     friend SmallString operator+(SmallString& lhs, const char* rhs) {
 
         #ifdef SMALL_STRING_DEBUG
@@ -395,7 +422,7 @@ public:
         return new_string;
     }
 
-    friend SmallString operator+(SmallString& lhs, SmallString& rhs) {
+    friend SmallString operator+(SmallString& lhs, const SmallString& rhs) {
 
         #ifdef SMALL_STRING_DEBUG
         std::cout << "lvalue ref + lvalue ref\n";
@@ -458,6 +485,10 @@ public:
         return new_string;
 
     }
+
+    // ========================================================================
+    // + rvalue ref is on left hand side
+    // ========================================================================
 
     friend SmallString operator+(SmallString&& lhs, const char* rhs) {
 
@@ -544,6 +575,10 @@ public:
         return new_string;
     }
 
+    // ========================================================================
+    // += lvalue ref is on left hand side
+    // ========================================================================
+
     friend SmallString& operator+=(SmallString& lhs, const char* rhs) {
         auto tmp = lhs + rhs;
         lhs = tmp;
@@ -555,6 +590,10 @@ public:
         return lhs;
     }
 
+    // ========================================================================
+    // comparison operators (except == which is defined above)
+    // ========================================================================
+    
     friend bool operator<(SmallString lhs, SmallString rhs) {
 
         #ifdef SMALL_STRING_DEBUG
@@ -580,7 +619,7 @@ public:
 
     }
 
-    friend int operator>=(SmallString lhs, SmallString rhs) {
+    friend bool operator>=(SmallString lhs, SmallString rhs) {
 
         #ifdef SMALL_STRING_DEBUG
         std::cout << "small_string_t compare, >=\n";
@@ -589,10 +628,18 @@ public:
         return !(lhs < rhs);
     }
 
+    friend bool operator>(SmallString lhs, SmallString rhs) {
+        return (lhs >= rhs) && !(lhs == rhs);
+    }
+
+    friend bool operator<=(SmallString lhs, SmallString rhs) {
+        return !(lhs > rhs);
+    }
+
 };
 
 // i give you intialization of static members in template classes... in c++
-template<typename char_type_t> std::vector<char_type_t> SmallString<char_type_t>::char_table;
+template<typename char_type_t> typename std::vector<char_type_t> SmallString<char_type_t>::char_table;
 template<typename char_type_t> std::vector<std::pair<int, int>> SmallString<char_type_t>::offset_table;
 
 typedef SmallString<char> small_string_t;
