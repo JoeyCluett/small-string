@@ -231,10 +231,10 @@ int main(int argc, char* argv[]) {
         cout << "\nString vector capacity: " << string_vector.capacity() << endl;
         auto cap = string_vector.capacity();
         for(int i = 0; i < cap+1; i++) {
-            // for vector to reallocate eventually
+            // force vector to reallocate eventually
             string_vector.emplace_back("Newstring");
         }
-        
+
     }
 
 #endif

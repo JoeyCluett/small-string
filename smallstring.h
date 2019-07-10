@@ -6,7 +6,14 @@
 // provided a lot of strings without the mandatory minimum overhead of the 
 // modern std::string (32 bytes). A lot of effort has gone into making this library 
 // a drop-in replacement for std::string. Obviously, that will never always be 
-// the case but a guy can dream, right?
+// the case but a guy can dream, right? An added bonus of the architecture used here 
+// is that it avoids memory fragmentation as all data used is in two contiguous memory
+// chunks
+//
+// Due to the way the library works, it is impossible to say exactly how much memory is 
+// in use at any one time. This is due, in part, to the replacement policy used when 
+// finding offset table entries. However, new objects will always take the first 
+// available entry that is closest to the beginning.
 //
 // this library is NOT thread safe! DO NOT USE WITH MULTITHREADED CODE, USE std::string INSTEAD!!!!!!
 // EDIT: you can include this library in multithreaded code but preprocessor guards should 
@@ -21,9 +28,9 @@
 // 6.) Container                [true, iterable]
 //
 // Notes:
-// never create or modify small_string_t objects while iterating. there is a very coupled 
+//      Never create or modify small_string_t objects while iterating. there is a very coupled 
 // relationship between ALL small_string_t objects as they all internally share a single 
-// static character buffer. this buffer may re-allocate itself at any time while modifying 
+// static character buffer. This buffer may re-allocate itself at any time while modifying 
 // strings and so any iterators will be invalidated
 //
 
@@ -92,6 +99,7 @@ private:
             auto& p_curr = SmallString::offset_table.at(next_entry);
             next_entry = this->find_offset_table_match(p_curr.second);
 
+            // adjust this entry
             p_curr.first -= sz;
             p_curr.second -= sz;
         }
@@ -713,7 +721,7 @@ public:
 
 // i give you intialization of static members in template classes... in c++
 template<typename char_type_t> typename std::vector<char_type_t> SmallString<char_type_t>::char_table;
-template<typename char_type_t> std::vector<std::pair<int, int>> SmallString<char_type_t>::offset_table;
+template<typename char_type_t> std::vector<std::pair<int, int>>  SmallString<char_type_t>::offset_table;
 
 typedef SmallString<char> small_string_t;
 #warning small_string_t is typedefed to SmallString<char>
