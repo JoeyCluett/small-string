@@ -13,7 +13,7 @@
 // Due to the way the library works, it is impossible to say exactly how much memory is 
 // in use at any one time. This is due, in part, to the replacement policy used when 
 // finding offset table entries. However, new objects will always take the first 
-// available entry that is closest to the beginning.
+// available entry that is closest to the beginning, creating a new one if none are available
 //
 // this library is NOT thread safe! DO NOT USE WITH MULTITHREADED CODE, USE std::string INSTEAD!!!!!!
 // EDIT: you can include this library in multithreaded code but preprocessor guards should 
@@ -51,10 +51,13 @@ typedef std::string small_string_t;
 template<typename char_type_t>
 class SmallString {
 private:
+
     typedef typename std::vector<char_type_t>::iterator small_string_iterator;
 
-    static std::vector<char_type_t> char_table;
+    static std::vector<char_type_t>         char_table;
     static std::vector<std::pair<int, int>> offset_table; // allows char table to be compressed when strings are destroyed
+
+    typedef std::pair<int, int> offset_table_entry_t;
 
     // every additional object has an overhead of 4 bytes here 
     // plus the two ints in the offset table (pair of ints 
@@ -67,6 +70,8 @@ private:
     // no more entries that logically come next
     int find_offset_table_match(int arg) {
         int sz = SmallString::offset_table.size();
+
+        // yup. iterate through the entire thing
         for(int i = 0; i < sz; i++) {
             if(SmallString::offset_table[i].first == arg)
                 return i;
@@ -192,7 +197,23 @@ public:
         }
     }
 
-    // TODO: create a constructor that accepts a std::string as an argument
+    SmallString(const std::string& s) {
+        #ifdef SMALL_STRING_DEBUG
+        std::cout << "small_string_t constructor, const std::string ref: " << s << std::endl;
+        #endif
+
+        int index = this->find_empty_entry();
+        auto& p = offset_table.at(index);
+        p.first = char_table.size();
+        p.second = p.first + s.size();
+
+        // dont need to reserve space this time because the argument is 
+        // independent of the existing buffer. add away!
+        for(char c : s)
+            char_table.push_back(c);
+
+        this->table_entry = index;
+    }
 
     ~SmallString(void) {
 
@@ -213,43 +234,133 @@ public:
     }
 
     // im debating whether this should actually be a public method. Calling 
-    // it too often will harm performance to an excessive degree
+    // it too often will harm performance to an excessive degree. it is 
+    // already called automatically when a small_string_t object is destroyed
     static void clean(void) {
         auto& ot = SmallString::offset_table;
         while(ot.back().first == -1 && ot.back().second == -1)
             ot.pop_back();
     }
 
+    struct iterator_t {
+        // maintaining these pieces of information allows the char buffer 
+        // to change i.e. due to other small_string objects going out of scope
+        int ot_index;   // offset table entry
+        int char_index; // current 0-based offset within the string
+
+        bool operator==(iterator_t& rhs) {
+            return 
+                this->ot_index == rhs.ot_index &&
+                this->char_index == rhs.char_index;
+        }
+
+        bool operator!=(iterator_t& rhs) {
+            //return !(*this == rhs);
+            return !this->operator==(rhs);
+        }
+
+        // pre-increment
+        iterator_t& operator++() {
+            this->char_index++;
+            return *this;
+        }
+
+        // post-increment
+        iterator_t operator++(int) const {
+            // trivally copyable
+            iterator_t iter = *this;
+            iter.char_index++;
+            return iter;
+        }
+
+        char_type_t& operator*(void) const {
+            auto& ot = SmallString::offset_table;
+            auto& ct = SmallString::char_table;
+
+            offset_table_entry_t p = ot.at(this->ot_index);
+            return ct.at(p.first + this->char_index);
+        }
+
+        // implicit user-defined type cast
+        operator std::string() const {
+            
+        }
+
+    };
+
+    //typedef typename std::vector<char_type_t>::iterator small_string_iterator;
+    typedef typename SmallString::iterator_t small_string_iterator_t;
+
     // seriously considering making a different iterator type that wont 
     // invalidate iterators if strings are modified while iterating
 
-    auto begin(void) const -> typename std::vector<char_type_t>::iterator {
+    //auto begin(void) const -> typename std::vector<char_type_t>::iterator {
+    auto begin(void) const -> small_string_iterator_t {
+
+        iterator_t iter;
+
         if(this->table_entry == -1) {
-            return SmallString::char_table.end();
+            
+            iter.ot_index   = -1;
+            iter.char_index = -1;
+            return iter;
+
         }
         else {
-            auto& p = SmallString::offset_table.at(this->table_entry);
-            return SmallString::char_table.begin() + p.first;
+            
+            iter.ot_index   = this->table_entry;
+            iter.char_index = 0;
+            return iter;
+
         }
     }
 
-    auto end(void) const -> typename std::vector<char_type_t>::iterator {
+    //auto end(void) const -> typename std::vector<char_type_t>::iterator {
+    auto end(void) const -> small_string_iterator_t {
+
+        iterator_t iter;
+
         if(this->table_entry == -1) {
-            return SmallString::char_table.end();
+            
+            iter.ot_index   = -1;
+            iter.char_index = -1;
+            return iter;
+
+            //return SmallString::char_table.end();
         }
         else {
             auto& p = SmallString::offset_table.at(this->table_entry);
-            return SmallString::char_table.begin() + p.second;
+
+            iter.ot_index   = this->table_entry;
+            iter.char_index = this->size();
+            return iter;
+
+            //return SmallString::char_table.begin() + p.second;
         }
     }
 
     // access individual character in string. throws runtime_error if 
     // index is out of bounds
     char& at(int index) {
-        if(index >= this->size())
+        if(index >= this->size() || index < 0)
             throw std::runtime_error("SmallString error: out of range using .at()");
         else
             return ((*this)[index]);
+    }
+
+    // remove all characters from string. after this operation, object has 
+    // the same state as though it had been constructed with the void constructor
+    void clear(void) {
+        if(this->table_entry != -1) {
+            this->compress_around(this->table_entry);
+            auto& p = offset_table.at(this->table_entry);
+            
+            // allow this offset table entry to be reclaimed
+            p.first = -1;
+            p.second = -1;
+
+            this->table_entry = -1;
+        }
     }
 
     auto print_buffer(std::ostream& os) -> std::ostream& {
@@ -280,8 +391,55 @@ public:
         return os;
     }
 
-    // access individual characters in a string. does 
-    // not perform bounds checking
+    // add new character to this string. behavior can be optimized in certain cases
+    void push_back(char_type_t c) {
+        if(this->table_entry == -1) {
+            // first character of a new string
+            int index = this->find_empty_entry();
+            auto& p = offset_table.at(index);
+            p.first  = char_table.size();
+            p.second = p.first + 1;
+            char_table.push_back(c);
+            this->table_entry = index;
+        }
+        else {
+            auto& p = offset_table.at(table_entry);
+            if(p.second == char_table.size()) {
+                // just add to the end of the char buffer and update the 
+                // offset table entry. this is the most ideal situation
+                p.second++;
+                char_table.push_back(c);
+            }
+            else {
+                // relocate everything
+                int new_index = this->find_empty_entry();
+                auto& p_new = offset_table.at(new_index);
+
+                p_new.first  = char_table.size();
+                p_new.second = p_new.first + this->size() + 1;
+
+                // ensure reallocation doesnt happen when we are copying
+                char_table.reserve(p_new.second);
+                for(char cc : *this)
+                    char_table.push_back(cc);
+                char_table.push_back(c); // add new character
+
+                // remove the characters of the old string
+                this->compress_around(this->table_entry);
+
+                // reset the old offset table entry so it can be reclaimed
+                auto& p_curr = offset_table.at(this->table_entry);
+                p_curr.first  = -1;
+                p_curr.second = -1;
+            
+                this->table_entry = new_index;
+            }
+        }
+    }
+
+    // access individual characters in a string. does not perform bounds 
+    // checking. accessing chars outside of the strings bounds is 
+    // undefined behavior
     char& operator[](int index) const {
         auto& cv = SmallString::char_table;
         auto& ot = SmallString::offset_table;
@@ -292,6 +450,18 @@ public:
     int size(void) const {
         auto& p = offset_table.at(this->table_entry);
         return p.second - p.first;
+    }
+
+    // explicit std::string cast
+    operator std::string() {
+        if(this->table_entry == -1) {
+            return std::string{""}; // empty string
+        }
+        else {
+            auto& p = SmallString::offset_table.at(this->table_entry);
+            auto& cv = SmallString::char_table;
+            return std::string{ cv.begin() + p.first, cv.begin() + p.second };
+        }
     }
 
     // equality operators
@@ -391,6 +561,10 @@ public:
         return !(*this == ss);
     }
 
+    // ========================================================================
+    // redirect operators for outputting to std::ostream's
+    // ========================================================================
+
     friend std::ostream& operator<<(std::ostream& os, const SmallString& ss) {
         if(ss.table_entry != -1) {
             auto& cv = SmallString::char_table;
@@ -412,6 +586,10 @@ public:
 
         return os;
     }
+
+    // ========================================================================
+    // assignment operators
+    // ========================================================================
 
     SmallString& operator=(SmallString const& rhs) {
 
@@ -593,7 +771,7 @@ public:
         return new_string;
     }
 
-    friend SmallString operator+(SmallString&& lhs, SmallString& rhs) {
+    friend SmallString operator+(SmallString&& lhs, SmallString const& rhs) {
 
         #ifdef SMALL_STRING_DEBUG
         std::cout << "rvalue ref + lvalue ref\n";

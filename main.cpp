@@ -144,101 +144,12 @@ int main(int argc, char* argv[]) {
         small_string_t::print_info(cout) << "\n";
     }
 
-    {
-        cout << "Testing with std::vector...\n";
-        std::vector<small_string_t> string_vector = { "string0", "string1", "string2", "string3" };
-
-        for(int i = 0; i < string_vector.size(); i++) {
-            cout << i << " : '" << string_vector[i] << "'\n";
-        }
-        small_string_t::print_info(cout) << "\n";
-
-        // reverse the vector
-        std::reverse(string_vector.begin(), string_vector.end());
-        cout << "After reversing the vector...\n";
-        for(int i = 0; i < string_vector.size(); i++) {
-            cout << i << " : '" << string_vector[i] << "'\n";
-        }
-        small_string_t::print_info(cout) << "\n";
-
-        string_vector.clear();
-        cout << "After clearing the vector...\n";
-        for(int i = 0; i < string_vector.size(); i++) {
-            cout << i << " : '" << string_vector[i] << "'\n";
-        }
-        small_string_t::print_info(cout) << "\n";
-    
-    }
-
-    cout << boolalpha; // true/false instead of 1/0
-
-    {
-        small_string_t temp_stringa("Hello World");
-        small_string_t temp_stringb("hEllo World");
-        small_string_t empty_string("");
-
-        cout << "Testing equivalence operators\n\n";
-        
-        // rvalue refs are on the left
-        cout << "rvalue refs on the left...\n";
-        cout << "Expecting true:  " << (small_string_t("Hello World") == "Hello World") << endl;
-        cout << "Expecting true:  " << (small_string_t("Hello World") == small_string_t("Hello World")) << endl;
-        cout << "Expecting true:  " << (small_string_t("Hello World") == temp_stringa) << endl;
-        cout << "Expecting false: " << (small_string_t("Hello World") == "hEllo World") << endl;
-        cout << "Expecting false: " << (small_string_t("Hello World") == small_string_t("hEllo World")) << endl;
-        cout << "Expecting false: " << (small_string_t("Hello World") == temp_stringb) << endl;
-
-        cout << "Expecting false: " << (small_string_t("Hello World") != "Hello World") << endl;
-        cout << "Expecting false: " << (small_string_t("Hello World") != small_string_t("Hello World")) << endl;
-        cout << "Expecting false: " << (small_string_t("Hello World") != temp_stringa) << endl;
-        cout << "Expecting true:  " << (small_string_t("Hello World") != "hEllo World") << endl;
-        cout << "Expecting true:  " << (small_string_t("Hello World") != small_string_t("hEllo World")) << endl;
-        cout << "Expecting true:  " << (small_string_t("Hello World") != temp_stringb) << endl << flush;
-
-        cout << "Expecting false: " << (small_string_t("Hello World") == "") << endl << flush;
-        cout << "Expecting true:  " << (small_string_t("") == "")            << endl << flush;
-        cout << "Expecting true:  " << (small_string_t("") == empty_string)  << endl << flush;
-
-        // lvalue refs are on the left
-        cout << "\nlvalue refs on the left...\n";
-        cout << "Expecting true:  " << (temp_stringa == "Hello World") << endl;
-        cout << "Expecting true:  " << (temp_stringa == small_string_t("Hello World")) << endl;
-        cout << "Expecting true:  " << (temp_stringa == temp_stringa) << endl;
-        cout << "Expecting false: " << (temp_stringa == "hEllo World") << endl;
-        cout << "Expecting false: " << (temp_stringa == small_string_t("hEllo World")) << endl;
-        cout << "Expecting false: " << (temp_stringa == temp_stringb) << endl;
-
-        cout << "Expecting false: " << (temp_stringa != "Hello World") << endl;
-        cout << "Expecting false: " << (temp_stringa != small_string_t("Hello World")) << endl;
-        cout << "Expecting false: " << (temp_stringa != temp_stringa) << endl;
-        cout << "Expecting true:  " << (temp_stringa != "hEllo World") << endl;
-        cout << "Expecting true:  " << (temp_stringa != small_string_t("hEllo World")) << endl;
-        cout << "Expecting true:  " << (temp_stringa != temp_stringb) << endl;
-    
-        cout << "Expecting false: " << (empty_string == small_string_t("Hello World")) << endl << flush; 
-        cout << "Expecting false: " << (temp_stringa == "") << endl << flush;
-        cout << "Expecting true:  " << (empty_string == "") << endl << flush;
-        cout << "Expecting true:  " << (empty_string == small_string_t("")) << endl << flush;
-        cout << "Expecting true:  " << (empty_string == empty_string) << endl << flush;
-
-
-    }
-
-    // add enough strings to a vector that it has to reallocate storage
-    {
-        std::vector<small_string_t> string_vector;
-        string_vector.reserve(8);
-        cout << "\nString vector capacity: " << string_vector.capacity() << endl;
-        auto cap = string_vector.capacity();
-        for(int i = 0; i < cap+1; i++) {
-            // force vector to reallocate eventually
-            string_vector.emplace_back("Newstring");
-        }
-
-    }
+   
 
 #else
+    
     cout << ":)\n";
+
 #endif
     return 0;
 }
